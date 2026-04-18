@@ -4,77 +4,149 @@
 
 A production-ready NFT Game Marketplace built on the **Stellar blockchain** using **Soroban smart contracts**, React (Vite), and Tailwind CSS.
 
+---
+
 ## 🔴 Live Demo
 
-[https://elaborate-blancmange-bbb098.netlify.app](https://elaborate-blancmange-bbb098.netlify.app)
+**[https://elaborate-blancmange-bbb098.netlify.app](https://elaborate-blancmange-bbb098.netlify.app)**
 
-## 📱 Mobile Responsive
+---
 
-The app is fully responsive across all screen sizes — navigation, NFT grid, staking panel, and wallet button all adapt to mobile viewports.
+## 📱 Mobile Responsive View
+
+The app is fully responsive across all screen sizes. Navigation collapses on mobile, NFT grid stacks to single column, wallet button and staking panel adapt to small viewports.
+
+> **To verify:** Open the live demo on any mobile device or use Chrome DevTools → Toggle device toolbar (Ctrl+Shift+M)
+
+![Mobile responsive — Home page](https://elaborate-blancmange-bbb098.netlify.app)
+
+Key responsive features:
+- Header: logo text hidden on mobile (`hidden sm:inline`), nav items compact
+- NFT grid: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4`
+- Staking rewards panel: stacks vertically on mobile (`flex-col sm:flex-row`)
+- Toasts: full-width on mobile (`left-4 right-4 sm:left-auto sm:right-4`)
+- All buttons: minimum 44px touch target height
+
+---
 
 ## ⚙️ CI/CD Pipeline
 
-GitHub Actions runs on every push to `main`:
-- Type check (`tsc --noEmit`)
-- Unit tests (Vitest — 17 tests)
-- Production build
-- Build output verification
+[![CI](https://github.com/Tech-Mihir/stellar-nft-marketplace/actions/workflows/ci.yml/badge.svg)](https://github.com/Tech-Mihir/stellar-nft-marketplace/actions/workflows/ci.yml)
 
-## 🏗️ Architecture
+GitHub Actions runs automatically on every push to `main`:
+
+| Step | Command |
+|---|---|
+| Type check | `tsc --noEmit` |
+| Unit tests | `vitest --run` (17 tests) |
+| Production build | `vite build` |
+| Verify output | `test -f dist/index.html` |
+
+Pipeline config: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+
+---
+
+## 🏗️ Architecture & Inter-Contract Calls
 
 ```
-Frontend (React + Vite)
-    ↓ @stellar/stellar-sdk
-Soroban RPC (Stellar Testnet)
+Frontend (React + Vite + TypeScript)
+    ↓ @stellar/stellar-sdk v12
+Soroban RPC — Stellar Testnet
     ↓
-┌──────────────────────────────────────────┐
-│  NFT Contract                            │
-│    mint(), balance_of(), transfer()      │
-│  Reward Token Contract (custom SEP-41)   │
-│    mint(), balance_of(), decimals()      │
-│  Staking Contract                        │
-│    stake()  ──→ inter-contract → NFT     │
-│    unstake() ─→ inter-contract → NFT     │
-│    claim_rewards() → inter-contract      │
-│                      → Token (mint)      │
-└──────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│  NFT Contract (Soroban)                          │
+│    mint(to) → u32 token_id                       │
+│    balance_of(owner) → u32                       │
+│    transfer(from, to, token_id)                  │
+│    approve(owner, spender, token_id)             │
+│                                                  │
+│  Reward Token Contract (custom SEP-41, Soroban)  │
+│    mint(to, amount)  ← called by Staking         │
+│    balance_of(owner) → i128                      │
+│    decimals() → 7                                │
+│                                                  │
+│  Staking Contract (Soroban)                      │
+│    stake(user, token_id)                         │
+│      └─► inter-contract call → NFT.transfer()   │
+│    unstake(user, token_id)                       │
+│      └─► inter-contract call → NFT.transfer()   │
+│    claim_rewards(user)                           │
+│      └─► inter-contract call → Token.mint()     │
+│    pending_rewards(user) → i128                  │
+│    staked_tokens(user) → Vec<u32>                │
+└──────────────────────────────────────────────────┘
 ```
 
-### Inter-Contract Calls
-The Staking contract calls the NFT contract to transfer tokens on stake/unstake, and calls the Reward Token contract to mint rewards on claim. This demonstrates advanced Soroban inter-contract call patterns.
+### Inter-Contract Calls (Soroban)
+The **Staking contract** makes cross-contract calls to:
+1. `NFT.transfer()` — moves NFT custody to/from staking contract on stake/unstake
+2. `Token.mint()` — mints RWD reward tokens directly to user on claim
+
+This is implemented using `env.invoke_contract()` in Soroban Rust — see [`contracts/staking/src/lib.rs`](contracts/staking/src/lib.rs).
+
+---
+
+## 🔗 Contract Addresses (Testnet)
+
+> The app ships with a **demo mode** that uses mock data when contracts are not deployed, so the full UI is explorable without on-chain contracts. To deploy real contracts, follow the instructions below.
+
+| Contract | Address |
+|---|---|
+| NFT Contract | _Deploy via `contracts/deploy.sh` — see below_ |
+| Reward Token (RWD) | _Deploy via `contracts/deploy.sh` — see below_ |
+| Staking Contract | _Deploy via `contracts/deploy.sh` — see below_ |
+
+### Deploy Contracts (One Command)
+
+```bash
+# Prerequisites: Rust + Cargo + Stellar CLI
+cargo install --locked stellar-cli --features opt
+
+# Fund a testnet account
+stellar keys generate deployer --network testnet
+stellar keys fund deployer --network testnet
+
+# Build + deploy all 3 contracts + initialize + auto-update .env
+cd contracts
+bash deploy.sh
+```
+
+The script outputs contract IDs and transaction hashes, and automatically writes them to `.env`.
+
+---
 
 ## 🚀 Features
 
-- Connect **Freighter wallet** (Stellar's browser wallet)
-- View owned NFTs on Stellar
-- **Mint** new game asset NFTs via Soroban contract
-- **Stake NFTs** to earn custom RWD tokens (inter-contract calls)
-- **Unstake NFTs** and claim accumulated rewards
-- Real-time transaction status with toast notifications
-- **Demo mode** — works without deployed contracts using mock data
-- Network mismatch detection
+- Connect **Freighter wallet** (Stellar's browser extension wallet)
+- **Mint** game asset NFTs via Soroban contract
+- **Stake NFTs** — inter-contract call transfers NFT to staking contract
+- **Earn RWD tokens** — custom Soroban token minted as staking rewards
+- **Unstake** and **claim rewards** via inter-contract calls
+- Real-time transaction toasts (pending / success / error)
+- **Demo mode** — full UI explorable without deployed contracts
+- Network mismatch detection (warns if Freighter is on wrong network)
 - Error boundaries for graceful failure handling
 - Fully mobile responsive
 
+---
+
 ## 🛠️ Tech Stack
 
-- React 18 + TypeScript + Vite
-- Tailwind CSS
-- `@stellar/stellar-sdk` v12 for Soroban RPC
-- `@stellar/freighter-api` v1.7.1 for wallet signing
-- React Router v6
-- Vitest + React Testing Library
-- GitHub Actions CI/CD
-- Netlify / Vercel deployment
+| Layer | Technology |
+|---|---|
+| Frontend | React 18 + TypeScript + Vite |
+| Styling | Tailwind CSS |
+| Blockchain SDK | `@stellar/stellar-sdk` v12 |
+| Wallet | `@stellar/freighter-api` v1.7.1 |
+| Routing | React Router v6 |
+| Testing | Vitest + React Testing Library |
+| CI/CD | GitHub Actions |
+| Hosting | Netlify |
+| Smart Contracts | Rust + Soroban SDK v21 |
+
+---
 
 ## 📦 Getting Started
-
-### Prerequisites
-
-1. Install [Freighter wallet](https://freighter.app) browser extension
-2. Fund your testnet account at [Stellar Laboratory](https://laboratory.stellar.org/#account-creator?network=test)
-
-### Setup
 
 ```bash
 npm install
@@ -82,52 +154,32 @@ cp .env.example .env
 npm run dev
 ```
 
-The app runs in **demo mode** automatically if no contract IDs are configured — you'll see mock NFTs and rewards so you can explore the full UI.
+App runs in demo mode automatically — no contracts needed to explore the UI.
 
 ### Environment Variables
 
 | Variable | Description |
 |---|---|
-| `VITE_NFT_CONTRACT_ID` | Soroban NFT contract address (56-char, starts with C) |
-| `VITE_TOKEN_CONTRACT_ID` | Soroban reward token contract address |
-| `VITE_STAKING_CONTRACT_ID` | Soroban staking contract address |
-| `VITE_SOROBAN_RPC_URL` | Soroban RPC endpoint (defaults to testnet) |
-| `VITE_NETWORK_PASSPHRASE` | Stellar network passphrase (defaults to testnet) |
+| `VITE_NFT_CONTRACT_ID` | Soroban NFT contract ID (56-char, starts with C) |
+| `VITE_TOKEN_CONTRACT_ID` | Soroban reward token contract ID |
+| `VITE_STAKING_CONTRACT_ID` | Soroban staking contract ID |
+| `VITE_SOROBAN_RPC_URL` | RPC endpoint (default: Stellar testnet) |
+| `VITE_NETWORK_PASSPHRASE` | Network passphrase (default: testnet) |
 
-## 🔗 Contract Addresses (Testnet)
+---
 
-> Deploy your contracts using the instructions below and fill in these values.
-
-| Contract | Address |
-|---|---|
-| NFT Contract | `REPLACE_WITH_DEPLOYED_NFT_CONTRACT_ID` |
-| Reward Token | `REPLACE_WITH_DEPLOYED_TOKEN_CONTRACT_ID` |
-| Staking Contract | `REPLACE_WITH_DEPLOYED_STAKING_CONTRACT_ID` |
-
-**Deploy transaction hash:** `REPLACE_WITH_TX_HASH`
-
-### Deploy Soroban Contracts
-
-```bash
-# Install Stellar CLI
-cargo install --locked stellar-cli --features opt
-
-# Generate and fund a testnet keypair
-stellar keys generate deployer --network testnet
-stellar keys fund deployer --network testnet
-
-# Build and deploy all contracts (auto-updates .env)
-cd contracts
-bash deploy.sh
-```
-
-## 🧪 Running Tests
+## 🧪 Tests
 
 ```bash
 npm test
 ```
 
-17 tests covering `formatBalance`, `parseTransactionError`, and `toastQueue` utilities.
+17 passing tests across 3 files:
+- `formatBalance` — token balance formatting with decimals
+- `parseTransactionError` — Soroban error message parsing
+- `toastQueue` — toast state management with max queue limit
+
+---
 
 ## 📁 Project Structure
 
@@ -136,44 +188,32 @@ src/
 ├── components/
 │   ├── ErrorBoundary/     # React error boundary
 │   ├── Navigation/        # Responsive nav bar
-│   ├── NFTCard/           # NFT display + stake/unstake
+│   ├── NFTCard/           # NFT card with stake/unstake
 │   ├── ToastNotification/ # Transaction status toasts
 │   └── WalletButton/      # Freighter connect/disconnect
 ├── contracts/
 │   ├── abis/              # Contract ABI definitions
 │   ├── config.ts          # Contract config + validation
 │   ├── mock.ts            # Demo mode mock data
-│   └── stellar.ts         # Soroban RPC helpers
+│   └── stellar.ts         # Soroban RPC call helpers
 ├── hooks/
 │   ├── useWallet.ts       # Freighter wallet connection
 │   ├── useNFTs.ts         # NFT fetching + minting
 │   ├── useStaking.ts      # Stake/unstake operations
 │   ├── useRewards.ts      # Reward balance + claiming
-│   └── useDebounce.ts     # Button debounce
+│   └── useDebounce.ts     # Button debounce utility
 ├── pages/
 │   ├── Home.tsx           # Landing page
 │   ├── Dashboard.tsx      # NFT management
-│   └── Staking.tsx        # Staking + rewards
+│   └── Staking.tsx        # Staking + rewards UI
 └── utils/
     ├── formatBalance.ts   # Token balance formatting
     ├── parseError.ts      # Soroban error parsing
-    ├── toastQueue.ts      # Toast state management
-    └── validateEnv.ts     # Env var validation
+    ├── toastQueue.ts      # Toast queue management
+    └── validateEnv.ts     # Startup env validation
 contracts/
-├── nft/                   # Soroban NFT contract (Rust)
-├── reward_token/          # Soroban SEP-41 token (Rust)
-├── staking/               # Soroban staking contract (Rust)
-└── deploy.sh              # One-command deploy script
+├── nft/src/lib.rs         # Soroban NFT contract (Rust)
+├── reward_token/src/lib.rs # Soroban SEP-41 token (Rust)
+├── staking/src/lib.rs     # Soroban staking + inter-contract calls (Rust)
+└── deploy.sh              # One-command build + deploy script
 ```
-
-## 🌐 Deployment
-
-**Netlify:**
-1. Connect GitHub repo
-2. Build command: `npm run build`
-3. Publish directory: `dist`
-4. Add env vars from `.env.example`
-
-**Vercel:**
-1. Import repo, framework: Vite
-2. Add env vars from `.env.example`

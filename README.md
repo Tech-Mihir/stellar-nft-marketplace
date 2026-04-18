@@ -1,14 +1,12 @@
 # Stellar NFT Game Marketplace
 
-[![CI](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci.yml)
+[![CI](https://github.com/Tech-Mihir/stellar-nft-marketplace/actions/workflows/ci.yml/badge.svg)](https://github.com/Tech-Mihir/stellar-nft-marketplace/actions/workflows/ci.yml)
 
 A production-ready NFT Game Marketplace built on the **Stellar blockchain** using **Soroban smart contracts**, React (Vite), and Tailwind CSS.
 
 ## 🔴 Live Demo
 
-[https://YOUR_DEPLOY_URL.netlify.app](https://YOUR_DEPLOY_URL.netlify.app)
-
-> Deploy to Netlify: connect this repo, set build command `npm run build`, publish dir `dist`, and add env vars from `.env.example`.
+[https://elaborate-blancmange-bbb098.netlify.app](https://elaborate-blancmange-bbb098.netlify.app)
 
 ## 📱 Mobile Responsive
 

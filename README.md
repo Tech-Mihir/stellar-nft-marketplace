@@ -92,9 +92,15 @@ This is implemented using `env.invoke_contract()` in Soroban Rust — see [`cont
 
 | Contract | Address |
 |---|---|
-| NFT Contract | _Deploy via `contracts/deploy.sh` — see below_ |
-| Reward Token (RWD) | _Deploy via `contracts/deploy.sh` — see below_ |
-| Staking Contract | _Deploy via `contracts/deploy.sh` — see below_ |
+| NFT Contract | `CCITVGCYZYZMGZTZBY55ASVGOZRJF2UMRJ5TUTUOOVQMWGGZJ3LMQSRG` |
+| Reward Token (RWD) | `CDG3FQ2LAWP2ZQHNZXHYQZLF5K7IRQCDQ3BQDMPDBLVG7RX5AMXA4PW6` |
+| Staking Contract | `CBFXEMFH7SNRSS7B2ZKNBZS4CB242SOCXPRADXVAAKA6ILYPLRQAW5EX` |
+
+**Deploy transaction hashes (Stellar Testnet):**
+- NFT deploy: [`64b72f789673517ab4d182176270817b23999dc755c2b687d2eb601fd3d5dd1c`](https://stellar.expert/explorer/testnet/tx/64b72f789673517ab4d182176270817b23999dc755c2b687d2eb601fd3d5dd1c)
+- Token deploy: [`b9e9928bbbac9907bf9631274f590907a686d65b6d44f4d18e4f9ce01a98585d`](https://stellar.expert/explorer/testnet/tx/b9e9928bbbac9907bf9631274f590907a686d65b6d44f4d18e4f9ce01a98585d)
+- Staking deploy: [`2f64a2dc30d128b21d5ebbc422899b7ccf1adc40fd529f6d3387ca54c20bd34b`](https://stellar.expert/explorer/testnet/tx/2f64a2dc30d128b21d5ebbc422899b7ccf1adc40fd529f6d3387ca54c20bd34b)
+- Staking init (inter-contract): [`8f25bbb60dd8989398e36bcf2f4437cb9e9179527c802ced11eb3fd3bff12043`](https://stellar.expert/explorer/testnet/tx/8f25bbb60dd8989398e36bcf2f4437cb9e9179527c802ced11eb3fd3bff12043)
 
 ### Deploy Contracts (One Command)
 

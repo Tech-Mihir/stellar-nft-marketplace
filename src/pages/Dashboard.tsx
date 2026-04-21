@@ -2,6 +2,7 @@ import { useNFTs } from '../hooks/useNFTs'
 import { useStaking } from '../hooks/useStaking'
 import { useDebounce } from '../hooks/useDebounce'
 import { NFTCard } from '../components/NFTCard/NFTCard'
+import { isMockMode } from '../contracts/mock'
 import type { Toast } from '../types'
 
 interface DashboardProps {
@@ -29,6 +30,22 @@ export function Dashboard({ publicKey, signTransaction, addToast }: DashboardPro
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
+      {/* Contract integration banner */}
+      {isMockMode() ? (
+        <div className="mb-6 bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 flex items-center gap-3">
+          <span className="text-yellow-400 text-lg">⚠️</span>
+          <p className="text-yellow-300 text-sm">Demo mode — add real contract IDs to <code className="bg-white/10 px-1 rounded">.env</code> to connect to Stellar testnet.</p>
+        </div>
+      ) : (
+        <div className="mb-6 bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3 flex items-start gap-3">
+          <span className="text-green-400 text-lg mt-0.5">✅</span>
+          <div className="text-sm space-y-1 min-w-0">
+            <p className="text-green-300 font-medium">Connected to Stellar Testnet — Soroban smart contracts active</p>
+            <p className="text-gray-400 font-mono text-xs truncate">NFT: {import.meta.env.VITE_NFT_CONTRACT_ID}</p>
+            <p className="text-gray-400 font-mono text-xs truncate">Staking: {import.meta.env.VITE_STAKING_CONTRACT_ID}</p>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-white">My Stellar NFTs</h1>

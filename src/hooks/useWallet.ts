@@ -17,6 +17,22 @@ export function useWallet(): StellarWallet {
   const [error, setError] = useState<string | null>(null)
   const [networkWarning, setNetworkWarning] = useState<string | null>(null)
 
+  const checkNetwork = useCallback(async () => {
+    try {
+      const net = await getNetwork()
+      const isTestnet = !net ||
+        net.toUpperCase().includes('TEST') ||
+        net === 'Test SDF Network ; September 2015'
+      if (!isTestnet) {
+        setNetworkWarning(
+          `Freighter is on "${net}" but this app expects Testnet. Please switch networks in Freighter.`
+        )
+      } else {
+        setNetworkWarning(null)
+      }
+    } catch { /* non-critical */ }
+  }, [])
+
   // Silent reconnect on mount if already allowed
   useEffect(() => {
     const tryReconnect = async () => {
@@ -26,25 +42,14 @@ export function useWallet(): StellarWallet {
         const allowed = await isAllowed()
         if (!allowed) return
         const info = await getUserInfo()
-        if (info?.publicKey) setPublicKey(info.publicKey)
+        if (info?.publicKey) {
+          setPublicKey(info.publicKey)
+          await checkNetwork()
+        }
       } catch { /* ignore */ }
     }
     tryReconnect()
-  }, [])
-
-  const checkNetwork = useCallback(async () => {
-    try {
-      const net = await getNetwork()
-      const expected = import.meta.env.VITE_NETWORK_PASSPHRASE || 'Test SDF Network ; September 2015'
-      if (net && net !== expected) {
-        setNetworkWarning(
-          `Freighter is on "${net}" but this app expects Testnet. Please switch networks in Freighter.`
-        )
-      } else {
-        setNetworkWarning(null)
-      }
-    } catch { /* non-critical */ }
-  }, [])
+  }, [checkNetwork])
 
   const connect = useCallback(async () => {
     setIsConnecting(true)

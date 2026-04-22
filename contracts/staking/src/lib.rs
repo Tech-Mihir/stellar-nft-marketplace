@@ -1,7 +1,7 @@
 #![no_std]
 use soroban_sdk::{
     contract, contractimpl, contracttype,
-    Address, Env, Vec,
+    Address, Env, IntoVal, Vec,
 };
 
 /// Reward rate: tokens per ledger per staked NFT (in stroops, 7 decimals)
@@ -36,20 +36,20 @@ impl StakingContract {
         user.require_auth();
 
         let nft: Address = env.storage().instance().get(&DataKey::NftContract).expect("not initialized");
+        let staking_contract = env.current_contract_address();
 
         // Accrue any existing rewards first
         Self::accrue_rewards(&env, &user);
 
-        // Transfer NFT from user to this contract (inter-contract call)
-        let staking_contract = env.current_contract_address();
+        // Transfer NFT from user to staking contract (inter-contract call)
         env.invoke_contract::<()>(
             &nft,
             &soroban_sdk::symbol_short!("transfer"),
             soroban_sdk::vec![
                 &env,
-                user.clone().into(),
-                staking_contract.into(),
-                token_id.into(),
+                user.clone().into_val(&env),
+                staking_contract.into_val(&env),
+                token_id.into_val(&env),
             ],
         );
 
@@ -69,20 +69,20 @@ impl StakingContract {
         user.require_auth();
 
         let nft: Address = env.storage().instance().get(&DataKey::NftContract).expect("not initialized");
+        let staking_contract = env.current_contract_address();
 
         // Accrue rewards before unstaking
         Self::accrue_rewards(&env, &user);
 
         // Transfer NFT back to user (inter-contract call)
-        let staking_contract = env.current_contract_address();
         env.invoke_contract::<()>(
             &nft,
             &soroban_sdk::symbol_short!("transfer"),
             soroban_sdk::vec![
                 &env,
-                staking_contract.into(),
-                user.clone().into(),
-                token_id.into(),
+                staking_contract.into_val(&env),
+                user.clone().into_val(&env),
+                token_id.into_val(&env),
             ],
         );
 
@@ -98,7 +98,7 @@ impl StakingContract {
         env.storage().persistent().remove(&DataKey::StakeTime(user, token_id));
     }
 
-    /// Claim accumulated rewards
+    /// Claim accumulated rewards — mints RWD tokens to user (inter-contract call)
     pub fn claim_rewards(env: Env, user: Address) {
         user.require_auth();
 
@@ -122,8 +122,8 @@ impl StakingContract {
             &soroban_sdk::symbol_short!("mint"),
             soroban_sdk::vec![
                 &env,
-                user.clone().into(),
-                pending.into(),
+                user.clone().into_val(&env),
+                pending.into_val(&env),
             ],
         );
 
@@ -189,7 +189,6 @@ impl StakingContract {
                 .unwrap_or(current_ledger);
             let ledgers_staked = (current_ledger - stake_time) as i128;
             pending += ledgers_staked * REWARD_RATE;
-            // Reset stake time to now
             env.storage().persistent().set(&DataKey::StakeTime(user.clone(), token_id), &current_ledger);
         }
 
